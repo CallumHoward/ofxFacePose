@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "ofApp.h"
 
 //--------------------------------------------------------------
@@ -29,35 +30,41 @@ void ofApp::draw(){
     // Draw camera image
     //grabber.draw(0,0);
 
-    ofPushStyle();
-
     // Draw debug pose
-    tracker.drawDebugPose();
+    //tracker.drawDebugPose();
 
-    int faceId = 0;
     float size = 500;
 
-    // Iterate over all faces
-    for(auto face : tracker.getInstances()){
-        // draw bounding box
-        //ofPushMatrix();
-        //ofSetColor(255,255,0,50);
-        //ofDrawRectangle(boundingBox);
-        //std::cout << boundingBox << '\n';
-        //std::cout << ofGetMouseX() << ", " << ofGetMouseY() << '\n';
-        //ofPopMatrix();
+    ofPushStyle();
+    ofPushMatrix();
 
+    auto faces = tracker.getInstances();
+
+    // Iterate over all faces
+    for (auto& face : faces) {
         ofRectangle boundingBox = face.getBoundingBox();
         boundingBox.scaleFromCenter(2.5f);
 
-        const auto targetBox = ofRectangle{size * faceId, 50, size, size};
+        const auto targetBox = ofRectangle{0, 50, size, size};
         grabber.getTexture().drawSubsection(targetBox, boundingBox);
 
-        ofPushStyle();
+        ofDrawBitmapStringHighlight("Label: " + ofToString(face.getLabel()), 10, 45);
+
+        ofTranslate(size, 0, 0);
+    }
+
+    if (faces.size() > 0) {
+        // get face with lowest label
+        int controlLabel = 0;
+        for (int i = 1; i < faces.size(); ++i) {
+            if (faces[i].getLabel() < faces[controlLabel].getLabel()) {
+                controlLabel = i;
+            }
+        }
 
         // Apply the pose matrix
         ofPushView();
-        face.loadPoseMatrix();
+        faces[controlLabel].loadPoseMatrix();
 
         // Now position 0,0,0 is at the forehead
         ofSetColor(255,0,0,50);
@@ -76,13 +83,10 @@ void ofApp::draw(){
         ofPopMatrix();
 
         ofPopView();
-
-        ofPopStyle();
-
-        ++faceId;
     }
-    ofPopStyle();
 
+    ofPopStyle();
+    ofPopMatrix();
 
     ofDrawBitmapStringHighlight("Tracker fps: "+ofToString(tracker.getThreadFps()), 10, 20);
 }
