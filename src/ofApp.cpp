@@ -5,11 +5,11 @@
 void ofApp::setup(){
     // Setup grabber
     grabber.setDeviceID(1);
-    grabber.setup(1280,720);
+    grabber.setup(1280, 720);
 
     // All examples share data files from example-data, so setting data path to this folder
     // This is only relevant for the example apps
-    ofSetDataPathRoot(ofFile(__BASE_FILE__).getEnclosingDirectory()+"../../model/");
+    ofSetDataPathRoot(ofFile(__BASE_FILE__).getEnclosingDirectory() + "../../model/");
 
     // Setup tracker
     tracker.setup();
@@ -18,7 +18,7 @@ void ofApp::setup(){
     mainOutputSyphonServer.setName("ofxFaceTracker Screen Output");
     mClient.setup();
 
-    ofSetFrameRate(60); // if vertical sync is off, we can go a bit fast... this caps the framerate at 60fps.
+    ofSetFrameRate(60);
 }
 
 //--------------------------------------------------------------
@@ -36,7 +36,7 @@ void ofApp::draw(){
     // Clear with alpha, so we can capture via syphon and composite elsewhere should we want.
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
+
     // Draw camera image
     //grabber.draw(0,0);
 
