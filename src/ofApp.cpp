@@ -14,6 +14,11 @@ void ofApp::setup(){
     // Setup tracker
     tracker.setup();
 
+    // Setup data structure to store faces
+    mFaceTextures = std::vector<ofTexture>(sNumFaces);
+    mFaceBounds = std::vector<ofRectangle>(sNumFaces);
+    mFaceStored = std::vector<bool>(sNumFaces, false);
+
     // Setup Syphon
     mainOutputSyphonServer.setName("ofxFaceTracker Screen Output");
     mClient.setup();
@@ -43,35 +48,40 @@ void ofApp::draw(){
     // Draw debug pose
     //tracker.drawDebugPose();
 
-    float size = 500;
+    float size = 100;
 
     ofPushStyle();
     ofPushMatrix();
 
     auto faces = tracker.getInstances();
 
-    // Iterate over all faces
+    // get face with lowest label
+    int controlLabel = 0;
+    for (int i = 1; i < faces.size(); ++i) {
+        if (faces[i].getLabel() < faces[controlLabel].getLabel()) {
+            controlLabel = i;
+        }
+    }
+
+    // Iterate over all faces and store them
     for (auto& face : faces) {
-        ofRectangle boundingBox = face.getBoundingBox();
-        boundingBox.scaleFromCenter(2.5f);
+        const int index = face.getLabel() % sNumFaces;
+        mFaceTextures[index] = grabber.getTexture();
+        mFaceBounds[index] = face.getBoundingBox();
+        mFaceBounds[index].scaleFromCenter(2.5f);
+        mFaceStored[index] = true;
+    }
 
-        const auto targetBox = ofRectangle{0, 50, size, size};
-        grabber.getTexture().drawSubsection(targetBox, boundingBox);
-
-        //ofDrawBitmapStringHighlight("Label: " + ofToString(face.getLabel()), 10, 45);
-
+    // draw stored faces
+    for (int i = 0; i < sNumFaces; ++i) {
+        if (mFaceStored[i]) {
+            const auto targetBox = ofRectangle{0, 50, size, size};
+            mFaceTextures[i].drawSubsection(targetBox, mFaceBounds[i]);
+        }
         ofTranslate(size, 0, 0);
     }
 
     if (faces.size() > 0) {
-        // get face with lowest label
-        int controlLabel = 0;
-        for (int i = 1; i < faces.size(); ++i) {
-            if (faces[i].getLabel() < faces[controlLabel].getLabel()) {
-                controlLabel = i;
-            }
-        }
-
         // Apply the pose matrix
         ofPushView();
         faces[controlLabel].loadPoseMatrix();
