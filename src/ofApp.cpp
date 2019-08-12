@@ -13,6 +13,12 @@ void ofApp::setup(){
 
     // Setup tracker
     tracker.setup();
+
+    // Setup Syphon
+    mainOutputSyphonServer.setName("ofxFaceTracker Screen Output");
+    mClient.setup();
+
+    ofSetFrameRate(60); // if vertical sync is off, we can go a bit fast... this caps the framerate at 60fps.
 }
 
 //--------------------------------------------------------------
@@ -27,6 +33,10 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
+    // Clear with alpha, so we can capture via syphon and composite elsewhere should we want.
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
     // Draw camera image
     //grabber.draw(0,0);
 
@@ -48,7 +58,7 @@ void ofApp::draw(){
         const auto targetBox = ofRectangle{0, 50, size, size};
         grabber.getTexture().drawSubsection(targetBox, boundingBox);
 
-        ofDrawBitmapStringHighlight("Label: " + ofToString(face.getLabel()), 10, 45);
+        //ofDrawBitmapStringHighlight("Label: " + ofToString(face.getLabel()), 10, 45);
 
         ofTranslate(size, 0, 0);
     }
@@ -87,6 +97,8 @@ void ofApp::draw(){
 
     ofPopStyle();
     ofPopMatrix();
+
+    mainOutputSyphonServer.publishScreen();
 
     ofDrawBitmapStringHighlight("Tracker fps: "+ofToString(tracker.getThreadFps()), 10, 20);
 }
