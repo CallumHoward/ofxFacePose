@@ -4,8 +4,10 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     // Setup grabber
+    const int width = 1280;
+    const int height = 720;
     grabber.setDeviceID(1);
-    grabber.setup(1280, 720);
+    grabber.setup(width, height);
 
     // All examples share data files from example-data, so setting data path to this folder
     // This is only relevant for the example apps
@@ -15,9 +17,12 @@ void ofApp::setup(){
     tracker.setup();
 
     // Setup data structure to store faces
-    mFaceTextures = std::vector<ofTexture>(sNumFaces);
-    mFaceBounds = std::vector<ofRectangle>(sNumFaces);
     mFaceStored = std::vector<bool>(sNumFaces, false);
+    mFaceFbos = std::vector<ofFbo>(sNumFaces);
+    mTargetBox = ofRectangle{0, 0, sSize, sSize};
+    for (auto& fbo : mFaceFbos) {
+        fbo.allocate(mTargetBox.width, mTargetBox.height, GL_RGBA);
+    }
 
     // Setup Syphon
     mainOutputSyphonServer.setName("ofxFaceTracker Screen Output");
@@ -48,8 +53,6 @@ void ofApp::draw(){
     // Draw debug pose
     //tracker.drawDebugPose();
 
-    float size = 100;
-
     ofPushStyle();
     ofPushMatrix();
 
@@ -66,20 +69,27 @@ void ofApp::draw(){
     // Iterate over all faces and store them
     for (auto& face : faces) {
         const int index = face.getLabel() % sNumFaces;
-        mFaceTextures[index] = grabber.getTexture();
-        mFaceBounds[index] = face.getBoundingBox();
-        mFaceBounds[index].scaleFromCenter(2.5f);
         mFaceStored[index] = true;
+
+        // scale bounding box
+        ofRectangle boundingBox = face.getBoundingBox();
+        boundingBox.scaleFromCenter(2.5f);
+
+        // create fbo
+        mFaceFbos[index].begin();
+        grabber.getTexture().drawSubsection(mTargetBox, boundingBox);
+        mFaceFbos[index].end();
     }
 
-    // draw stored faces
+    // draw stored face fbos
     for (int i = 0; i < sNumFaces; ++i) {
         if (mFaceStored[i]) {
-            const auto targetBox = ofRectangle{0, 50, size, size};
-            mFaceTextures[i].drawSubsection(targetBox, mFaceBounds[i]);
+            mFaceFbos[i].draw(0, 0);
         }
-        ofTranslate(size, 0, 0);
+        ofTranslate(sSize, 0, 0);
     }
+
+    mainOutputSyphonServer.publishScreen();
 
     if (faces.size() > 0) {
         // Apply the pose matrix
@@ -107,8 +117,6 @@ void ofApp::draw(){
 
     ofPopStyle();
     ofPopMatrix();
-
-    mainOutputSyphonServer.publishScreen();
 
     ofDrawBitmapStringHighlight("Tracker fps: "+ofToString(tracker.getThreadFps()), 10, 20);
 }

@@ -23,5 +23,11 @@ private:
     std::vector<ofTexture> mFaceTextures;
     std::vector<ofRectangle> mFaceBounds;
     std::vector<bool> mFaceStored;
+    ofBufferObject mTempCopyBuffer;
+
+    std::vector<ofFbo> mFaceFbos;
+    ofRectangle mTargetBox;
+
     const int sNumFaces = 6;
+    const float sSize = 100;
 };
