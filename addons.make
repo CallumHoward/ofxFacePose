@@ -1,3 +1,5 @@
 ofxCv
 ofxFaceTracker2
 ofxOpenCv
+ofxOsc
+ofxSyphon
