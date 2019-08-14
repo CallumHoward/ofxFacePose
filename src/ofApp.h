@@ -19,15 +19,17 @@ private:
     ofxSyphonServer mainOutputSyphonServer;
     ofxSyphonClient mClient;
 
-    ofTexture mPrimaryFace;
-    std::vector<ofTexture> mFaceTextures;
-    std::vector<ofRectangle> mFaceBounds;
-    std::vector<bool> mFaceStored;
-    ofBufferObject mTempCopyBuffer;
+    ofImage mFaceMask;
 
+    std::vector<bool> mFaceStored;
     std::vector<ofFbo> mFaceFbos;
+    std::vector<glm::vec2> mFaceAnchors;
     ofRectangle mTargetBox;
 
-    const int sNumFaces = 6;
-    const float sSize = 100;
+    int mTick = 0;
+
+    const int sNumFaces = 5;
+    const float sSize = 150;
+    const float sPrimaryFaceScale = 2;
+    const float sPerlinScale = 0.001f;
 };

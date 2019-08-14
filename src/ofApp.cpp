@@ -3,18 +3,20 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-    // Setup grabber
     const int width = 1280;
     const int height = 720;
+    ofSetWindowShape(width, height);
+
+    // Setup grabber
     grabber.setDeviceID(1);
     grabber.setup(width, height);
 
-    // All examples share data files from example-data, so setting data path to this folder
-    // This is only relevant for the example apps
-    ofSetDataPathRoot(ofFile(__BASE_FILE__).getEnclosingDirectory() + "../../model/");
-
     // Setup tracker
     tracker.setup();
+
+    // Setup face mask
+    //mFaceMask.load("soft_mask01.png");
+    //mFaceMask.resize(sSize, sSize);
 
     // Setup data structure to store faces
     mFaceStored = std::vector<bool>(sNumFaces, false);
@@ -22,13 +24,23 @@ void ofApp::setup(){
     mTargetBox = ofRectangle{0, 0, sSize, sSize};
     for (auto& fbo : mFaceFbos) {
         fbo.allocate(mTargetBox.width, mTargetBox.height, GL_RGBA);
+        //fbo.getTexture().setAlphaMask(mFaceMask.getTexture());
     }
+
+    // Setup face anchors
+    const float stretch = 1.2f;
+    mFaceAnchors = std::vector<glm::vec2>({
+            glm::vec2{-1.0f * stretch, 0},
+            glm::vec2{-0.71f * stretch, 0.71},
+            glm::vec2{0, 1},
+            glm::vec2{0.71f * stretch, 0.71},
+            glm::vec2{1.0f * stretch, 0}});
 
     // Setup Syphon
     mainOutputSyphonServer.setName("ofxFaceTracker Screen Output");
     mClient.setup();
 
-    ofSetFrameRate(60);
+    ofSetFrameRate(30);
 }
 
 //--------------------------------------------------------------
@@ -39,6 +51,8 @@ void ofApp::update(){
     if(grabber.isFrameNew()){
         tracker.update(grabber);
     }
+
+    mTick++;
 }
 
 //--------------------------------------------------------------
@@ -59,10 +73,11 @@ void ofApp::draw(){
     auto faces = tracker.getInstances();
 
     // get face with lowest label
-    int controlLabel = 0;
-    for (int i = 1; i < faces.size(); ++i) {
-        if (faces[i].getLabel() < faces[controlLabel].getLabel()) {
-            controlLabel = i;
+    int controlIndex = 0;
+    for (int i = 0; i < faces.size(); ++i) {
+        if (faces[i].getLabel() < faces[controlIndex].getLabel()) {
+            controlIndex = i;
+            std::cout << controlIndex << '\n';
         }
     }
 
@@ -82,11 +97,33 @@ void ofApp::draw(){
     }
 
     // draw stored face fbos
+    ofPushMatrix();
+    ofTranslate((float)ofGetWindowWidth() * 0.5f, (float)ofGetWindowHeight() * 0.7f);
     for (int i = 0; i < sNumFaces; ++i) {
-        if (mFaceStored[i]) {
-            mFaceFbos[i].draw(0, 0);
-        }
-        ofTranslate(sSize, 0, 0);
+        if (!mFaceStored[i]) { continue; }
+        ofPushMatrix();
+        const auto offsetX = ofNoise(mFaceAnchors[i].x + mTick * sPerlinScale) - 0.5f;
+        const auto offsetY = ofNoise(mFaceAnchors[i].y + mTick * sPerlinScale) - 0.5f;
+        const auto scaleOffset = ofMap(ofNoise(mFaceAnchors[i].x + mTick * sPerlinScale), 0, 1, 0.9f, 1.1f);
+        ofTranslate(offsetX * sSize * 0.5f, offsetY * sSize * 0.5f);
+        ofScale(scaleOffset);
+
+        const auto anchor = -mFaceAnchors[i] * ofGetWindowHeight() * 0.5f;
+        mFaceFbos[i].draw(anchor + glm::vec2(-sSize * 0.5f, -sSize * 0.5f));
+        ofPopMatrix();
+    }
+    ofPopMatrix();
+
+    // draw primary face
+    if (faces.size() > 0) {
+        ofPushMatrix();
+        ofTranslate((float)ofGetWindowWidth() * 0.5f, (float)ofGetWindowHeight() * 0.65f);
+        ofScale(sPrimaryFaceScale, sPrimaryFaceScale);
+
+        const int controlLabel = faces[controlIndex].getLabel();
+        mFaceFbos[controlLabel % sNumFaces].draw(-sSize * 0.5f, -sSize * 0.5f);
+
+        ofPopMatrix();
     }
 
     mainOutputSyphonServer.publishScreen();
@@ -94,7 +131,7 @@ void ofApp::draw(){
     if (faces.size() > 0) {
         // Apply the pose matrix
         ofPushView();
-        faces[controlLabel].loadPoseMatrix();
+        faces[controlIndex].loadPoseMatrix();
 
         // Now position 0,0,0 is at the forehead
         ofSetColor(255,0,0,50);
@@ -117,6 +154,8 @@ void ofApp::draw(){
 
     ofPopStyle();
     ofPopMatrix();
+
+    //mFaceMask.draw(100, 100);
 
     ofDrawBitmapStringHighlight("Tracker fps: "+ofToString(tracker.getThreadFps()), 10, 20);
 }
